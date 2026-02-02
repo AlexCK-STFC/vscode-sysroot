@@ -6,7 +6,8 @@ all: sysroot
 
 sysroot:
 	mkdir -p toolchain
-	docker build -t vscode-sysroot --target sysroot .
+	docker buildx create --name sysroot-builder --use --driver-opt env.BUILDKIT_STEP_LOG_MAX_SIZE=10000000 --driver-opt env.BUILDKIT_STEP_LOG_MAX_SPEED=10000000 || true
+	docker buildx build --builder sysroot-builder --progress=plain --load --platform=linux/amd64 -t vscode-sysroot:latest --target sysroot .
 	docker run -it --rm -v $$PWD/toolchain:/out vscode-sysroot cp vscode-sysroot-x86_64-linux-gnu.tgz /out/
 	ls -l toolchain
 
