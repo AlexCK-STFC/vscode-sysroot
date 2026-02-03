@@ -1,0 +1,53 @@
+name: Build Sysroot
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-sysroot:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      
+      - name: Build docker image (target=sysroot)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          load: true
+          tags: vscode-sysroot:latest
+          target: sysroot      
+          build-args: |
+            CI=true
+
+
+
+      - name: Extract sysroot archive
+        run: |
+          mkdir -p toolchain
+          docker run --rm \
+            -v "$PWD/toolchain:/out" \
+            vscode-sysroot \
+            cp vscode-sysroot-x86_64-linux-gnu.tgz /out/
+
+      - name: List output
+        run: ls -l toolchain
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: toolchain/vscode-sysroot-x86_64-linux-gnu.tgz
